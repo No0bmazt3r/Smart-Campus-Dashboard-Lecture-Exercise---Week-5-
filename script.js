@@ -52,6 +52,8 @@ const height = 330;
 
 const tooltip = d3.select("#tooltip");
 
+let isInitialRender = true;
+
 // ---------- Helper Functions ----------
 function latest(data) {
     return data[data.length - 1];
@@ -83,8 +85,7 @@ function hideTooltip() {
 
 // ---------- Sparkline ----------
 function drawSparkline(svgId, data) {
-    clearChart(svgId);
-
+    // Sparkline supports incremental update: use class selectors to detect existing elements
     const svg = d3.select(svgId)
         .attr("width", 160)
         .attr("height", 55);
@@ -101,24 +102,35 @@ function drawSparkline(svgId, data) {
         .x((d, i) => x(i))
         .y(d => y(d));
 
-    svg.append("path")
-        .datum(data)
-        .attr("fill", "none")
-        .attr("stroke", "#1f77b4")
-        .attr("stroke-width", 2.5)
-        .attr("d", line);
+    const path = svg.selectAll("path.sparkline").data([data]);
 
-    svg.append("circle")
-        .attr("cx", x(data.length - 1))
-        .attr("cy", y(latest(data)))
-        .attr("r", 3.5)
-        .attr("fill", "#0f766e");
+    path.join(
+        enter => enter.append("path")
+            .attr("class", "sparkline")
+            .attr("fill", "none")
+            .attr("stroke", "#1f77b4")
+            .attr("stroke-width", 2.5)
+            .attr("d", line),
+        update => update.transition().duration(700).attr("d", line)
+    );
+
+    const endDot = svg.selectAll("circle.spark-end").data([latest(data)]);
+
+    endDot.join(
+        enter => enter.append("circle")
+            .attr("class", "spark-end")
+            .attr("r", 3.5)
+            .attr("fill", "#0f766e")
+            .attr("cx", x(data.length - 1))
+            .attr("cy", y(latest(data))),
+        update => update.transition().duration(700)
+            .attr("cx", x(data.length - 1))
+            .attr("cy", y(latest(data)))
+    );
 }
 
 // ---------- Line Chart ----------
 function drawLineChart(svgId, data, title, yLabel, lineColor, annotationText) {
-    clearChart(svgId);
-
     const svg = d3.select(svgId)
         .attr("width", width)
         .attr("height", height);
@@ -135,76 +147,109 @@ function drawLineChart(svgId, data, title, yLabel, lineColor, annotationText) {
         .x((d, i) => x(days[i]))
         .y(d => y(d));
 
-    svg.append("g")
-        .attr("class", "axis")
-        .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x));
+    // Create axes once
+    if (svg.selectAll('.x-axis').empty()) {
+        svg.append("g")
+            .attr("class", "axis x-axis")
+            .attr("transform", `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(x));
 
-    svg.append("g")
-        .attr("class", "axis")
-        .attr("transform", `translate(${margin.left},0)`)
-        .call(d3.axisLeft(y).ticks(5));
+        svg.append("g")
+            .attr("class", "axis y-axis")
+            .attr("transform", `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y).ticks(5));
 
-    svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", height - 12)
-        .attr("text-anchor", "middle")
-        .attr("fill", "#475569")
-        .text("Day");
+        svg.append("text")
+            .attr("class", "x-label")
+            .attr("x", width / 2)
+            .attr("y", height - 12)
+            .attr("text-anchor", "middle")
+            .attr("fill", "#475569")
+            .text("Day");
 
-    svg.append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("x", -height / 2)
-        .attr("y", 18)
-        .attr("text-anchor", "middle")
-        .attr("fill", "#475569")
-        .text(yLabel);
+        svg.append("text")
+            .attr("class", "y-label")
+            .attr("transform", "rotate(-90)")
+            .attr("x", -height / 2)
+            .attr("y", 18)
+            .attr("text-anchor", "middle")
+            .attr("fill", "#475569")
+            .text(yLabel);
+    } else {
+        // update y axis domain smoothly
+        svg.select('.y-axis').transition().duration(700).call(d3.axisLeft(y).ticks(5));
+    }
 
-    svg.append("path")
-        .datum(data)
-        .attr("fill", "none")
-        .attr("stroke", lineColor)
-        .attr("stroke-width", 3)
-        .attr("d", line);
+    // Path
+    const path = svg.selectAll('path.line-path').data([data]);
+    path.join(
+        enter => enter.append('path')
+            .attr('class', 'line-path')
+            .attr('fill', 'none')
+            .attr('stroke', lineColor)
+            .attr('stroke-width', 3)
+            .attr('d', line),
+        update => update.transition().duration(700).attr('d', line)
+    );
 
-    svg.selectAll(".line-dot")
-        .data(data)
-        .enter()
-        .append("circle")
-        .attr("class", "line-dot")
-        .attr("cx", (d, i) => x(days[i]))
-        .attr("cy", d => y(d))
-        .attr("r", 5)
-        .attr("fill", lineColor)
-        .on("mouseover", function (event, d) {
-            const index = data.indexOf(d);
-            showTooltip(event, `<strong>${days[index]}</strong><br>${title}: ${d}`);
-        })
-        .on("mouseout", hideTooltip);
+    // Dots with data join
+    const dots = svg.selectAll('circle.line-dot').data(data);
+    dots.join(
+        enter => enter.append('circle')
+            .attr('class', 'line-dot')
+            .attr('cx', (d, i) => x(days[i]))
+            .attr('cy', d => y(d))
+            .attr('r', 0)
+            .attr('fill', lineColor)
+            .on('mouseover', function (event, d) {
+                const index = data.indexOf(d);
+                showTooltip(event, `<strong>${days[index]}</strong><br>${title}: ${d}`);
+            })
+            .on('mouseout', hideTooltip)
+            .transition().duration(600).attr('r', 5),
+        update => update.transition().duration(700)
+            .attr('cx', (d, i) => x(days[i]))
+            .attr('cy', d => y(d)),
+        exit => exit.transition().duration(300).attr('r', 0).remove()
+    );
 
     // Annotation on highest point
     const maxValue = d3.max(data);
     const maxIndex = data.indexOf(maxValue);
 
-    svg.append("text")
-        .attr("class", "annotation")
-        .attr("x", x(days[maxIndex]) - 20)
-        .attr("y", y(maxValue) - 12)
-        .text(annotationText);
+    const ann = svg.selectAll('.annotation-text').data([maxValue]);
+    ann.join(
+        enter => enter.append('text')
+            .attr('class', 'annotation-text')
+            .attr('x', x(days[maxIndex]) - 20)
+            .attr('y', y(maxValue) - 12)
+            .text(annotationText)
+            .attr('fill', '#dc2626'),
+        update => update.transition().duration(700)
+            .attr('x', x(days[maxIndex]) - 20)
+            .attr('y', y(maxValue) - 12),
+    );
 
-    svg.append("line")
-        .attr("x1", x(days[maxIndex]))
-        .attr("y1", y(maxValue) - 5)
-        .attr("x2", x(days[maxIndex]))
-        .attr("y2", y(maxValue) + 18)
-        .attr("stroke", "#dc2626")
-        .attr("stroke-width", 2);
+    const annLine = svg.selectAll('.annotation-line').data([maxValue]);
+    annLine.join(
+        enter => enter.append('line')
+            .attr('class', 'annotation-line')
+            .attr('x1', x(days[maxIndex]))
+            .attr('y1', y(maxValue) - 5)
+            .attr('x2', x(days[maxIndex]))
+            .attr('y2', y(maxValue) + 18)
+            .attr('stroke', '#dc2626')
+            .attr('stroke-width', 2),
+        update => update.transition().duration(700)
+            .attr('x1', x(days[maxIndex]))
+            .attr('y1', y(maxValue) - 5)
+            .attr('x2', x(days[maxIndex]))
+            .attr('y2', y(maxValue) + 18)
+    );
 }
 
 // ---------- Attendance Bar Chart ----------
 function drawAttendanceChart() {
-    clearChart("#attendanceChart");
-
     const buildingData = Object.keys(campusData)
         .filter(b => b !== "All Buildings")
         .map(b => ({
@@ -225,66 +270,72 @@ function drawAttendanceChart() {
         .domain([0, 100])
         .range([height - margin.bottom, margin.top]);
 
-    svg.append("g")
-        .attr("class", "axis")
-        .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x));
+    if (svg.selectAll('.x-axis').empty()) {
+        svg.append("g")
+            .attr("class", "axis x-axis")
+            .attr("transform", `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(x));
 
-    svg.append("g")
-        .attr("class", "axis")
-        .attr("transform", `translate(${margin.left},0)`)
-        .call(d3.axisLeft(y).ticks(5));
+        svg.append("g")
+            .attr("class", "axis y-axis")
+            .attr("transform", `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y).ticks(5));
 
-    svg.append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("x", -height / 2)
-        .attr("y", 18)
-        .attr("text-anchor", "middle")
-        .attr("fill", "#475569")
-        .text("Attendance (%)");
+        svg.append("text")
+            .attr("class", "y-label")
+            .attr("transform", "rotate(-90)")
+            .attr("x", -height / 2)
+            .attr("y", 18)
+            .attr("text-anchor", "middle")
+            .attr("fill", "#475569")
+            .text("Attendance (%)");
+    }
 
-    svg.selectAll("rect")
-        .data(buildingData)
-        .enter()
-        .append("rect")
-        .attr("x", d => x(d.building))
-        .attr("y", d => y(d.attendance))
-        .attr("width", x.bandwidth())
-        .attr("height", d => height - margin.bottom - y(d.attendance))
-        .attr("fill", d => d.building === selectedBuilding ? "#f97316" : "#1f77b4")
-        .attr("rx", 5)
-        .style("cursor", "pointer")
-        .on("mouseover", function (event, d) {
-            d3.select(this).attr("opacity", 0.8);
-            showTooltip(event, `<strong>${d.building}</strong><br>Attendance: ${d.attendance}%`);
-        })
-        .on("mouseout", function () {
-            d3.select(this).attr("opacity", 1);
-            hideTooltip();
-        })
-        .on("click", function (event, d) {
-            selectedBuilding = d.building;
-            document.getElementById("selectedBuilding").innerHTML = selectedBuilding;
-            renderDashboard();
-        });
+    const bars = svg.selectAll('rect.att-bar').data(buildingData, d => d.building);
 
-    svg.selectAll(".bar-label")
-        .data(buildingData)
-        .enter()
-        .append("text")
-        .attr("class", "bar-label")
-        .attr("x", d => x(d.building) + x.bandwidth() / 2)
-        .attr("y", d => y(d.attendance) - 8)
-        .attr("text-anchor", "middle")
-        .attr("fill", "#334155")
-        .attr("font-weight", "bold")
-        .text(d => d.attendance + "%");
+    bars.join(
+        enter => enter.append('rect')
+            .attr('class', 'att-bar')
+            .attr('x', d => x(d.building))
+            .attr('y', height - margin.bottom)
+            .attr('width', x.bandwidth())
+            .attr('height', 0)
+            .attr('fill', d => d.building === selectedBuilding ? '#f97316' : '#1f77b4')
+            .attr('rx', 5)
+            .style('cursor', 'pointer')
+            .on('mouseover', function (event, d) { d3.select(this).attr('opacity', 0.8); showTooltip(event, `<strong>${d.building}</strong><br>Attendance: ${d.attendance}%`); })
+            .on('mouseout', function () { d3.select(this).attr('opacity', 1); hideTooltip(); })
+            .on('click', function (event, d) { selectedBuilding = d.building; document.getElementById('selectedBuilding').innerHTML = selectedBuilding; renderDashboard(); })
+            .transition().duration(700)
+            .attr('y', d => y(d.attendance))
+            .attr('height', d => height - margin.bottom - y(d.attendance)),
+        update => update.transition().duration(700)
+            .attr('x', d => x(d.building))
+            .attr('y', d => y(d.attendance))
+            .attr('width', x.bandwidth())
+            .attr('height', d => height - margin.bottom - y(d.attendance))
+            .attr('fill', d => d.building === selectedBuilding ? '#f97316' : '#1f77b4'),
+        exit => exit.transition().duration(300).attr('height', 0).remove()
+    );
+
+    const labels = svg.selectAll('.bar-label').data(buildingData, d => d.building);
+    labels.join(
+        enter => enter.append('text')
+            .attr('class', 'bar-label')
+            .attr('x', d => x(d.building) + x.bandwidth() / 2)
+            .attr('y', height - margin.bottom)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#334155')
+            .attr('font-weight', 'bold')
+            .text(d => d.attendance + '%')
+            .transition().duration(700).attr('y', d => y(d.attendance) - 8),
+        update => update.transition().duration(700).attr('x', d => x(d.building) + x.bandwidth() / 2).attr('y', d => y(d.attendance) - 8).text(d => d.attendance + '%'),
+        exit => exit.remove()
+    );
 }
 
 // ---------- Composite Chart ----------
 function drawCompositeChart(data) {
-    clearChart("#compositeChart");
-
     const svg = d3.select("#compositeChart")
         .attr("width", width)
         .attr("height", height);
@@ -302,77 +353,75 @@ function drawCompositeChart(data) {
         .domain([0, d3.max(data.co2) * 1.3])
         .range([height - margin.bottom, margin.top]);
 
-    svg.append("g")
-        .attr("class", "axis")
-        .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x));
+    if (svg.selectAll('.x-axis').empty()) {
+        svg.append("g")
+            .attr("class", "axis x-axis")
+            .attr("transform", `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(x));
 
-    svg.append("g")
-        .attr("class", "axis")
-        .attr("transform", `translate(${margin.left},0)`)
-        .call(d3.axisLeft(yElectric).ticks(5));
+        svg.append("g")
+            .attr("class", "axis y-axis-left")
+            .attr("transform", `translate(${margin.left},0)`)
+            .call(d3.axisLeft(yElectric).ticks(5));
 
-    svg.append("g")
-        .attr("class", "axis")
-        .attr("transform", `translate(${width - margin.right},0)`)
-        .call(d3.axisRight(yCO2).ticks(5));
+        svg.append("g")
+            .attr("class", "axis y-axis-right")
+            .attr("transform", `translate(${width - margin.right},0)`)
+            .call(d3.axisRight(yCO2).ticks(5));
 
-    svg.append("text")
-        .attr("x", margin.left)
-        .attr("y", 18)
-        .attr("fill", "#69b3a2")
-        .attr("font-weight", "bold")
-        .text("Electricity Usage (kWh)");
+        svg.append("text")
+            .attr("x", margin.left)
+            .attr("y", 18)
+            .attr("fill", "#69b3a2")
+            .attr("font-weight", "bold")
+            .text("Electricity Usage (kWh)");
 
-    svg.append("text")
-        .attr("x", width - margin.right - 120)
-        .attr("y", 18)
-        .attr("fill", "#ef4444")
-        .attr("font-weight", "bold")
-        .text("CO₂ Emissions (kg)");
+        svg.append("text")
+            .attr("x", width - margin.right - 120)
+            .attr("y", 18)
+            .attr("fill", "#ef4444")
+            .attr("font-weight", "bold")
+            .text("CO₂ Emissions (kg)");
+    } else {
+        svg.select('.y-axis-left').transition().duration(700).call(d3.axisLeft(yElectric).ticks(5));
+        svg.select('.y-axis-right').transition().duration(700).call(d3.axisRight(yCO2).ticks(5));
+    }
 
-    svg.selectAll(".composite-bar")
-        .data(data.electricity)
-        .enter()
-        .append("rect")
-        .attr("class", "composite-bar")
-        .attr("x", (d, i) => x(days[i]))
-        .attr("y", d => yElectric(d))
-        .attr("width", x.bandwidth())
-        .attr("height", d => height - margin.bottom - yElectric(d))
-        .attr("fill", "#69b3a2")
-        .attr("rx", 5)
-        .on("mouseover", function (event, d) {
-            const index = data.electricity.indexOf(d);
-            showTooltip(event, `<strong>${days[index]}</strong><br>Electricity: ${d} kWh`);
-        })
-        .on("mouseout", hideTooltip);
+    // Bars
+    const bars = svg.selectAll('rect.composite-bar').data(data.electricity);
+    bars.join(
+        enter => enter.append('rect')
+            .attr('class', 'composite-bar')
+            .attr('x', (d, i) => x(days[i]))
+            .attr('y', d => height - margin.bottom)
+            .attr('width', x.bandwidth())
+            .attr('height', 0)
+            .attr('fill', '#69b3a2')
+            .attr('rx', 5)
+            .on('mouseover', function (event, d) { const index = data.electricity.indexOf(d); showTooltip(event, `<strong>${days[index]}</strong><br>Electricity: ${d} kWh`); })
+            .on('mouseout', hideTooltip)
+            .transition().duration(700).attr('y', d => yElectric(d)).attr('height', d => height - margin.bottom - yElectric(d)),
+        update => update.transition().duration(700).attr('x', (d, i) => x(days[i])).attr('y', d => yElectric(d)).attr('height', d => height - margin.bottom - yElectric(d)),
+        exit => exit.transition().duration(300).attr('height', 0).remove()
+    );
 
-    const line = d3.line()
+    // CO2 line
+    const lineGen = d3.line()
         .x((d, i) => x(days[i]) + x.bandwidth() / 2)
         .y(d => yCO2(d));
 
-    svg.append("path")
-        .datum(data.co2)
-        .attr("fill", "none")
-        .attr("stroke", "#ef4444")
-        .attr("stroke-width", 3)
-        .attr("d", line);
+    const co2Path = svg.selectAll('path.co2-line').data([data.co2]);
+    co2Path.join(
+        enter => enter.append('path').attr('class', 'co2-line').attr('fill', 'none').attr('stroke', '#ef4444').attr('stroke-width', 3).attr('d', lineGen),
+        update => update.transition().duration(700).attr('d', lineGen)
+    );
 
-    svg.selectAll(".co2-dot")
-        .data(data.co2)
-        .enter()
-        .append("circle")
-        .attr("class", "co2-dot")
-        .attr("cx", (d, i) => x(days[i]) + x.bandwidth() / 2)
-        .attr("cy", d => yCO2(d))
-        .attr("r", 5)
-        .attr("fill", "#ef4444")
-        .on("mouseover", function (event, d) {
-            const index = data.co2.indexOf(d);
-            showTooltip(event, `<strong>${days[index]}</strong><br>CO₂: ${d} kg`);
-        })
-        .on("mouseout", hideTooltip);
+    const dots = svg.selectAll('circle.co2-dot').data(data.co2);
+    dots.join(
+        enter => enter.append('circle').attr('class', 'co2-dot').attr('cx', (d, i) => x(days[i]) + x.bandwidth() / 2).attr('cy', d => yCO2(d)).attr('r', 0).attr('fill', '#ef4444').on('mouseover', function (event, d) { const index = data.co2.indexOf(d); showTooltip(event, `<strong>${days[index]}</strong><br>CO₂: ${d} kg`); }).on('mouseout', hideTooltip).transition().duration(600).attr('r', 5),
+        update => update.transition().duration(700).attr('cx', (d, i) => x(days[i]) + x.bandwidth() / 2).attr('cy', d => yCO2(d)),
+        exit => exit.transition().duration(300).attr('r', 0).remove()
+    );
 }
 
 // ---------- Render Whole Dashboard ----------
@@ -380,33 +429,20 @@ function renderDashboard() {
     const data = campusData[selectedBuilding];
 
     updateKPI(data);
-
+    // On first render we build axes and elements; subsequent renders update smoothly
     drawSparkline("#electricitySparkline", data.electricity);
     drawSparkline("#waterSparkline", data.water);
     drawSparkline("#wifiSparkline", data.wifi);
     drawSparkline("#attendanceSparkline", data.attendance);
     drawSparkline("#co2Sparkline", data.co2);
 
-    drawLineChart(
-        "#electricityChart",
-        data.electricity,
-        "Electricity",
-        "Electricity Usage (kWh)",
-        "#15803d",
-        "Peak Usage"
-    );
-
-    drawLineChart(
-        "#waterChart",
-        data.water,
-        "Water",
-        "Water Usage (L)",
-        "#0284c7",
-        "Water Spike"
-    );
+    drawLineChart("#electricityChart", data.electricity, "Electricity", "Electricity Usage (kWh)", "#15803d", "Peak Usage");
+    drawLineChart("#waterChart", data.water, "Water", "Water Usage (L)", "#0284c7", "Water Spike");
 
     drawAttendanceChart();
     drawCompositeChart(data);
+
+    isInitialRender = false;
 }
 
 // ---------- Reset Button ----------
@@ -416,8 +452,10 @@ document.getElementById("resetBtn").addEventListener("click", function () {
     renderDashboard();
 });
 
-// ---------- Real-Time Update Simulation ----------
-setInterval(function () {
+// ---------- Simulated Streaming / Buffered Updates ----------
+// For production, replace this with WebSocket / SSE and push updates into the same handler.
+let updatePending = false;
+function pushRandomUpdate() {
     const data = campusData[selectedBuilding];
 
     data.electricity.push(Math.floor(Math.random() * 80) + 250);
@@ -435,8 +473,32 @@ setInterval(function () {
     data.co2.push(Math.floor(Math.random() * 30) + 50);
     data.co2.shift();
 
-    renderDashboard();
-}, 5000);
+    // Batch UI updates via rAF to avoid layout thrash if updates come rapidly
+    if (!updatePending) {
+        updatePending = true;
+        requestAnimationFrame(() => {
+            // Update only data-driven elements; avoid full clearing
+            updateKPI(campusData[selectedBuilding]);
+
+            drawSparkline("#electricitySparkline", data.electricity);
+            drawSparkline("#waterSparkline", data.water);
+            drawSparkline("#wifiSparkline", data.wifi);
+            drawSparkline("#attendanceSparkline", data.attendance);
+            drawSparkline("#co2Sparkline", data.co2);
+
+            drawLineChart("#electricityChart", data.electricity, "Electricity", "Electricity Usage (kWh)", "#15803d", "Peak Usage");
+            drawLineChart("#waterChart", data.water, "Water", "Water Usage (L)", "#0284c7", "Water Spike");
+
+            drawAttendanceChart();
+            drawCompositeChart(data);
+
+            updatePending = false;
+        });
+    }
+}
+
+// Simulate a stream at 1s intervals. For sub-second demos, lower the interval but beware of CPU.
+const streamInterval = setInterval(pushRandomUpdate, 1000);
 
 // ---------- Initial Load ----------
 renderDashboard();
