@@ -412,6 +412,11 @@ export function drawWifiHeatmap(svgId, data, buildingName) {
     .domain([0, d3.max(heatmapData, (d) => d.value)])
     .interpolator(d3.interpolateYlGnBu);
 
+  const legendWidth = 160;
+  const legendHeight = 10;
+  const legendX = width - margin.right - legendWidth;
+  const legendY = height - 20;
+
   if (svg.selectAll('.x-axis').empty()) {
     svg
       .append('g')
@@ -432,6 +437,80 @@ export function drawWifiHeatmap(svgId, data, buildingName) {
       .text(
         `WiFi Density Heatmap${buildingName !== 'All Buildings' ? ` - ${buildingName}` : ''}`
       );
+
+    svg
+      .append('text')
+      .attr('x', margin.left)
+      .attr('y', margin.top + 5)
+      .attr('fill', '#475569')
+      .attr('font-size', 12)
+      .attr('font-weight', '600')
+      .text('Campus zones');
+
+    svg
+      .append('text')
+      .attr('x', width / 2)
+      .attr('y', height - 8)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#475569')
+      .attr('font-size', 12)
+      .text('Day');
+
+    const maxValue = d3.max(heatmapData, (d) => d.value);
+
+    const defs = svg.selectAll('defs').data([0]);
+    defs.join((enter) => enter.append('defs'));
+
+    const gradient = svg
+      .select('defs')
+      .selectAll('#wifi-legend-gradient')
+      .data([0]);
+    gradient.join((enter) => {
+      const linearGradient = enter
+        .append('linearGradient')
+        .attr('id', 'wifi-legend-gradient')
+        .attr('x1', '0%')
+        .attr('x2', '100%')
+        .attr('y1', '0%')
+        .attr('y2', '0%');
+
+      linearGradient
+        .selectAll('stop')
+        .data(d3.range(0, 1.0001, 0.1))
+        .join('stop')
+        .attr('offset', (d) => `${d * 100}%`)
+        .attr('stop-color', (d) => color(maxValue * d));
+
+      return linearGradient;
+    });
+
+    svg
+      .append('rect')
+      .attr('class', 'wifi-legend-bar')
+      .attr('x', legendX)
+      .attr('y', legendY)
+      .attr('width', legendWidth)
+      .attr('height', legendHeight)
+      .attr('rx', 5)
+      .attr('fill', 'url(#wifi-legend-gradient)');
+
+    svg
+      .append('text')
+      .attr('class', 'wifi-legend-label')
+      .attr('x', legendX)
+      .attr('y', legendY - 4)
+      .attr('fill', '#475569')
+      .attr('font-size', 11)
+      .text('Low');
+
+    svg
+      .append('text')
+      .attr('class', 'wifi-legend-label')
+      .attr('x', legendX + legendWidth - 20)
+      .attr('y', legendY - 4)
+      .attr('fill', '#475569')
+      .attr('font-size', 11)
+      .text('High');
   }
 
   const cells = svg
