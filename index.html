@@ -4,8 +4,6 @@
     <meta charset="UTF-8" />
     <title>Smart Campus Monitoring Dashboard</title>
 
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-
     <link rel="stylesheet" href="style.css" />
   </head>
 
@@ -72,11 +70,20 @@
       </div>
 
       <div class="chart-card">
-        <h2>Composite Chart: Electricity Usage + CO₂ Emissions</h2>
+        <h2>Composite Chart: Attendance + WiFi Users</h2>
         <svg id="compositeChart"></svg>
         <p>
-          Bar chart represents electricity usage while line chart represents CO₂
-          emissions.
+          Bar chart represents attendance while line chart represents WiFi user
+          load.
+        </p>
+      </div>
+
+      <div class="chart-card">
+        <h2>WiFi Density Heatmap</h2>
+        <svg id="wifiHeatmap"></svg>
+        <p>
+          Heatmap showing active WiFi users by campus zone and day to reveal
+          usage hotspots.
         </p>
       </div>
     </div>
@@ -84,8 +91,9 @@
     <div id="tooltip" class="tooltip"></div>
 
     <div class="footer-note">
-      Smart Campus Dashboard using D3.js: Sparklines, Composite Chart, Click
-      Interaction, Annotation and Real-Time Updates.
+      Smart Campus Dashboard using D3.js: Sparklines, composite views,
+      click-based drill-down, contextual annotations, heatmap analysis, and
+      real-time updates.
     </div>
 
     <script type="module" src="src/main.js"></script>

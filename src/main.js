@@ -4,14 +4,22 @@ import {
   drawSparkline,
   drawLineChart,
   drawAttendanceChart,
+  drawWifiHeatmap,
   drawCompositeChart,
 } from './charts.js';
 
 let selectedBuilding = 'All Buildings';
 
+function setSelectedBuildingLabel() {
+  document.getElementById('selectedBuilding').innerHTML =
+    selectedBuilding === 'All Buildings'
+      ? 'Campus'
+      : `Campus &gt; ${selectedBuilding}`;
+}
+
 document.getElementById('resetBtn').addEventListener('click', () => {
   selectedBuilding = 'All Buildings';
-  document.getElementById('selectedBuilding').innerHTML = selectedBuilding;
+  setSelectedBuildingLabel();
   renderDashboard();
 });
 
@@ -35,24 +43,23 @@ function renderDashboard() {
     data.electricity,
     'Electricity',
     'Electricity Usage (kWh)',
-    '#15803d',
-    'Peak Usage'
+    '#15803d'
   );
   drawLineChart(
     '#waterChart',
     data.water,
     'Water',
     'Water Usage (L)',
-    '#0284c7',
-    'Water Spike'
+    '#0284c7'
   );
 
   drawAttendanceChart(campusData, selectedBuilding, (building) => {
     selectedBuilding = building;
-    document.getElementById('selectedBuilding').innerHTML = selectedBuilding;
+    setSelectedBuildingLabel();
     renderDashboard();
   });
 
+  drawWifiHeatmap('#wifiHeatmap', data.wifi, selectedBuilding);
   drawCompositeChart(data);
 }
 
@@ -67,6 +74,7 @@ const simController = startSimulation(
 );
 
 // Initial render
+setSelectedBuildingLabel();
 renderDashboard();
 
 export { renderDashboard, campusData, simController };
