@@ -4,8 +4,8 @@ A compact D3.js prototype for a "Smart Campus Monitoring Dashboard" demonstratin
 
 ## What’s included
 
-- `index.html` — minimal static page loading D3 v7 from CDN and `script.js`.
-- `script.js` — dashboard logic: KPI cards, sparklines, line/bar/composite charts, smooth D3 enter/update/exit transitions, and a simulated streaming update loop.
+- `index.html` — minimal static page loading the `src/main.js` ES module.
+- `src/` — modular ES modules: `data.js`, `utils.js`, `kpi.js`, `charts.js`, `main.js` (replaces the monolithic `script.js`).
 - `style.css` — lightweight styling and responsive layout.
 
 ## Highlights
@@ -43,21 +43,29 @@ No other dependencies are required.
 
 ## If you want a package-managed setup
 
-If you prefer to manage dependencies locally (e.g., to pin a D3 version or build toolchain):
+If you prefer a package-managed development workflow (recommended for extension, bundling, or local versioning), this project includes a `package.json` and is configured for Vite.
 
-1. Initialize a project and install D3:
+1. Install dependencies and run the dev server:
 
 ```bash
 # using npm
-npm init -y
-npm install d3
+npm install
+npm run dev
 
 # or using pnpm
-pnpm init -y
-pnpm add d3
+pnpm install
+pnpm run dev
 ```
 
-2. Update `index.html` to load the local `node_modules/d3/dist/d3.min.js` instead of the CDN, or use a bundler (Vite/Rollup) to bundle `script.js` and D3.
+2. The `dev` script runs Vite which supports bare imports like `import * as d3 from 'd3'` in the ES modules under `src/`.
+
+3. Build for production with `npm run build` and preview with `npm run preview`.
+
+## Code Quality
+
+- Format the project with `npm run format`.
+- Check formatting with `npm run format:check`.
+- Lint the JavaScript files with `npm run lint`.
 
 ## Notes & Next steps
 

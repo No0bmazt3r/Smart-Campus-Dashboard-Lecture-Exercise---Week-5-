@@ -1,98 +1,93 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Smart Campus Monitoring Dashboard</title>
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
 
-    <link rel="stylesheet" href="style.css">
-</head>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-<body>
-
+  <body>
     <h1>🏫 Smart Campus Monitoring Dashboard</h1>
 
     <div class="filter-box">
-        Selected Building:
-        <span id="selectedBuilding">All Buildings</span>
-        <button id="resetBtn">Reset</button>
+      Selected Building:
+      <span id="selectedBuilding">All Buildings</span>
+      <button id="resetBtn">Reset</button>
     </div>
 
     <!-- KPI Cards -->
     <div class="kpi-container">
+      <div class="kpi-card">
+        <h3>Electricity Usage</h3>
+        <h2 id="electricityValue"></h2>
+        <svg id="electricitySparkline"></svg>
+      </div>
 
-        <div class="kpi-card">
-            <h3>Electricity Usage</h3>
-            <h2 id="electricityValue"></h2>
-            <svg id="electricitySparkline"></svg>
-        </div>
+      <div class="kpi-card">
+        <h3>Water Usage</h3>
+        <h2 id="waterValue"></h2>
+        <svg id="waterSparkline"></svg>
+      </div>
 
-        <div class="kpi-card">
-            <h3>Water Usage</h3>
-            <h2 id="waterValue"></h2>
-            <svg id="waterSparkline"></svg>
-        </div>
+      <div class="kpi-card">
+        <h3>WiFi Users</h3>
+        <h2 id="wifiValue"></h2>
+        <svg id="wifiSparkline"></svg>
+      </div>
 
-        <div class="kpi-card">
-            <h3>WiFi Users</h3>
-            <h2 id="wifiValue"></h2>
-            <svg id="wifiSparkline"></svg>
-        </div>
+      <div class="kpi-card">
+        <h3>Attendance</h3>
+        <h2 id="attendanceValue"></h2>
+        <svg id="attendanceSparkline"></svg>
+      </div>
 
-        <div class="kpi-card">
-            <h3>Attendance</h3>
-            <h2 id="attendanceValue"></h2>
-            <svg id="attendanceSparkline"></svg>
-        </div>
-
-        <div class="kpi-card">
-            <h3>CO₂ Emissions</h3>
-            <h2 id="co2Value"></h2>
-            <svg id="co2Sparkline"></svg>
-        </div>
-
+      <div class="kpi-card">
+        <h3>CO₂ Emissions</h3>
+        <h2 id="co2Value"></h2>
+        <svg id="co2Sparkline"></svg>
+      </div>
     </div>
 
     <!-- Charts -->
     <div class="dashboard-grid">
+      <div class="chart-card">
+        <h2>Electricity Usage Trend</h2>
+        <svg id="electricityChart"></svg>
+        <p>Line chart showing electricity usage trend with annotation.</p>
+      </div>
 
-        <div class="chart-card">
-            <h2>Electricity Usage Trend</h2>
-            <svg id="electricityChart"></svg>
-            <p>Line chart showing electricity usage trend with annotation.</p>
-        </div>
+      <div class="chart-card">
+        <h2>Water Usage Trend</h2>
+        <svg id="waterChart"></svg>
+        <p>Line chart used to monitor water consumption pattern.</p>
+      </div>
 
-        <div class="chart-card">
-            <h2>Water Usage Trend</h2>
-            <svg id="waterChart"></svg>
-            <p>Line chart used to monitor water consumption pattern.</p>
-        </div>
+      <div class="chart-card">
+        <h2>Attendance by Building</h2>
+        <svg id="attendanceChart"></svg>
+        <p>Click a building bar to filter KPI values.</p>
+      </div>
 
-        <div class="chart-card">
-            <h2>Attendance by Building</h2>
-            <svg id="attendanceChart"></svg>
-            <p>Click a building bar to filter KPI values.</p>
-        </div>
-
-        <div class="chart-card">
-            <h2>Composite Chart: Electricity Usage + CO₂ Emissions</h2>
-            <svg id="compositeChart"></svg>
-            <p>Bar chart represents electricity usage while line chart represents CO₂ emissions.</p>
-        </div>
-
+      <div class="chart-card">
+        <h2>Composite Chart: Electricity Usage + CO₂ Emissions</h2>
+        <svg id="compositeChart"></svg>
+        <p>
+          Bar chart represents electricity usage while line chart represents CO₂
+          emissions.
+        </p>
+      </div>
     </div>
 
     <div id="tooltip" class="tooltip"></div>
 
     <div class="footer-note">
-        Smart Campus Dashboard using D3.js: Sparklines, Composite Chart, Click Interaction, Annotation and Real-Time
-        Updates.
+      Smart Campus Dashboard using D3.js: Sparklines, Composite Chart, Click
+      Interaction, Annotation and Real-Time Updates.
     </div>
 
     <script type="module" src="src/main.js"></script>
-
-</body>
-
+  </body>
 </html>
