@@ -55,6 +55,3 @@ If you prefer a package-managed development workflow (recommended for extension,
 - Consider adding accessibility (ARIA) labels, keyboard navigation, and a legend explaining units/colors.
 - For sub-second updates in production, batch incoming messages and use WebWorkers for heavy computations.
 
----
-
-If you want, I can add a `package.json` with scripts and an optional `serve` dependency, or switch D3 to a local install and add a small build script. Tell me which you'd prefer.
